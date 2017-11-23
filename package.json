@@ -1,0 +1,27 @@
+{
+  "name": "chrome-extension-starter-reason-react",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w",
+    "clean": "bsb -clean-world",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "webpack": "webpack -w"
+  },
+  "keywords": [
+    "BuckleScript"
+  ],
+  "author": "Javier Chávarri",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "reason-react": ">=0.2.1"
+  },
+  "devDependencies": {
+    "bs-platform": "^2.0.1",
+    "bucklescript-chrome": "git://github.com/jchavarri/bucklescript-chrome.git#start-extensions",
+    "copy-webpack-plugin": "^4.2.1",
+    "webpack": "^3.8.1"
+  }
+}
