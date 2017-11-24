@@ -10,8 +10,12 @@ type color = [
   [@bs.as "Yellow"] | `Yellow
 ];
 
-/* Helper function from https://gist.github.com/Lokeh/a8d1dc6aa2043efa62b23e559291053e */
+/* Helper functions from https://gist.github.com/Lokeh/a8d1dc6aa2043efa62b23e559291053e */
+/* Get rid of the need for returning a promise every time we use `then_` */
 let thenResolve = (fn) => Js.Promise.then_((value) => Js.Promise.resolve(fn(value)));
+
+/* Get rid of pesky compiler warnings at the end of a side-effectful promise chain */
+let thenIgnore = (fn, p) => thenResolve((value) => fn(value), p) |> ignore;
 
 let getCurrentTabUrl = () => {
   /* Query filter to be passed to chrome.tabs.query - see
@@ -61,22 +65,13 @@ let changeBackgroundColor = (maybeColor) =>
      into a page. Since we omit the optional first argument "tabId", the script
      is inserted into the active tab of the current window, which serves as the
      default. */
-  Js.Promise.make(
-    (~resolve, ~reject as _) =>
-      Js.Option.(
-        map(
-          [@bs]
-          (
-            (color) => {
-              let script = "document.body.style.backgroundColor=\"" ++ color ++ "\";";
-              let scriptDetails = Tabs.mkScriptDetails(~code=script, ());
-              Tabs.executeScriptWithCallback(scriptDetails, (_result) => [@bs] resolve(color))
-            }
-          ),
-          maybeColor
-        )
-      ) |> ignore
-  );
+  switch maybeColor {
+  | Some(color) =>
+    let script = "document.body.style.backgroundColor=\"" ++ color ++ "\";";
+    let scriptDetails = Tabs.mkScriptDetails(~code=script, ());
+    Tabs.executeScript(scriptDetails)
+  | None => ()
+  };
 
 /**
  * Gets the saved background color for url.
@@ -94,9 +89,8 @@ let getSavedBackgroundColor = (maybeUrl) => {
     };
   Js.Promise.make(
     (~resolve, ~reject as _) =>
-      Js.Nullable.(
-        iter(
-          from_opt(maybeUrl),
+      Js.Option.(
+        map(
           [@bs]
           (
             (url) =>
@@ -108,13 +102,16 @@ let getSavedBackgroundColor = (maybeUrl) => {
                      for chrome.runtime.lastError to ensure correctness even when the API call
                      fails. */
                   let restored =
-                    test(lastError) ? unwrapStoreValue(Js.Dict.get(items, url)) : None;
+                    Js.Nullable.test(lastError) ?
+                      Js.Dict.get(items, url) |> unwrapStoreValue : None;
                   [@bs] resolve(restored)
                 }
               )
-          )
+          ),
+          maybeUrl
         )
       )
+      |> ignore
   )
 };
 
@@ -166,7 +163,7 @@ let make = (_children) => {
         {...state, selectedColor: Js.Option.getWithDefault(`White, colorFromJs(color))},
         (
           (self) => {
-            changeBackgroundColor(Some(color)) |> ignore;
+            changeBackgroundColor(Some(color));
             saveBackgroundColor(self.state.url, color)
           }
         )
@@ -174,7 +171,7 @@ let make = (_children) => {
     | DidRestoreColor(color) =>
       ReasonReact.UpdateWithSideEffects(
         {...state, selectedColor: Js.Option.getWithDefault(`White, colorFromJs(color))},
-        ((_self) => changeBackgroundColor(Some(color)) |> ignore)
+        ((_self) => changeBackgroundColor(Some(color)))
       )
     | DidGetUrl(maybeUrl) =>
       ReasonReact.UpdateWithSideEffects(
@@ -182,19 +179,16 @@ let make = (_children) => {
         (
           (self) =>
             getSavedBackgroundColor(maybeUrl)
-            |> thenResolve(
+            |> thenIgnore(
                  Js.Option.map([@bs] ((color) => self.reduce(() => DidRestoreColor(color), ())))
                )
-            |> ignore
         )
       )
     },
   didMount: (_self) =>
     ReasonReact.SideEffects(
       (self) =>
-        getCurrentTabUrl()
-        |> thenResolve((maybeUrl) => self.reduce(() => DidGetUrl(maybeUrl), ()))
-        |> ignore
+        getCurrentTabUrl() |> thenIgnore((maybeUrl) => self.reduce(() => DidGetUrl(maybeUrl), ()))
     ),
   render: (self) =>
     <div>
