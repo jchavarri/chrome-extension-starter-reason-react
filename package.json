@@ -16,10 +16,10 @@
   "dependencies": {
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
-    "reason-react": ">=0.2.1"
+    "reason-react": "^0.3.4"
   },
   "devDependencies": {
-    "bs-platform": "^2.0.1",
+    "bs-platform": "^2.2.3",
     "bucklescript-chrome": "git://github.com/jchavarri/bucklescript-chrome.git#start-extensions",
     "copy-webpack-plugin": "^4.2.1",
     "webpack": "^3.8.1"

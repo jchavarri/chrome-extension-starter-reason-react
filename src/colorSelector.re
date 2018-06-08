@@ -34,7 +34,7 @@ let getCurrentTabUrl = () => {
           let tab = tabs[0];
           /* A tab is a plain object that provides information about the tab.
              See https://developer.chrome.com/extensions/tabs#type-Tab */
-          let maybeUrl = Js.Nullable.to_opt(tab##url);
+          let maybeUrl = Js.Nullable.toOption(tab##url);
           /* tab.url is only available if the "activeTab" permission is declared.
              If you want to see the URL of other tabs (e.g. after removing active:true
              from |queryInfo|), then the "tabs" permission is required to see their
